@@ -32,6 +32,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'combat' | 'conditions' | 'rules'>('combat');
   const [conditionToDelete, setConditionToDelete] = useState<string | null>(null);
   const [isConditionsMinimized, setIsConditionsMinimized] = useState(false);
+  const [showOnlyFinalPenalties, setShowOnlyFinalPenalties] = useState(false);
+  const [hoveredCondition, setHoveredCondition] = useState<string | null>(null);
   
   // Form state
   const [newName, setNewName] = useState('');
@@ -59,7 +61,7 @@ export default function App() {
       migratedCombatants = data.combatants.map((c: any) => ({
         ...c,
         activeConditions: (c.activeConditions || []).map((ac: any) => 
-          typeof ac === 'string' ? { conditionId: ac, remainingTurns: null } : ac
+          typeof ac === 'string' ? { conditionId: ac, remainingTurns: null, isManual: true } : { ...ac, isManual: ac.isManual ?? true }
         )
       }));
     }
@@ -259,16 +261,76 @@ export default function App() {
   };
 
   const toggleCondition = (combatantId: string, conditionId: string) => {
-    setCombatants(combatants.map(c => {
-      if (c.id !== combatantId) return c;
-      const hasCondition = c.activeConditions.some(ac => ac.conditionId === conditionId);
-      return {
-        ...c,
-        activeConditions: hasCondition 
-          ? c.activeConditions.filter(ac => ac.conditionId !== conditionId)
-          : [...c.activeConditions, { conditionId, remainingTurns: null }]
-      };
-    }));
+    setCombatants(prevCombatants => {
+      return prevCombatants.map(c => {
+        if (c.id !== combatantId) return c;
+
+        const isCurrentlyActive = c.activeConditions.some(ac => ac.conditionId === conditionId && ac.isManual);
+        let newActiveConditions = [...c.activeConditions];
+
+        const addConditionRecursive = (id: string, isManual: boolean, list: ActiveCondition[]) => {
+          const existing = list.find(ac => ac.conditionId === id);
+          if (existing) {
+            if (isManual) existing.isManual = true;
+            return list;
+          }
+          
+          const condData = conditions.find(cond => cond.id === id);
+          const newList = [...list, { conditionId: id, remainingTurns: null, isManual }];
+          
+          if (condData?.causes) {
+            condData.causes.forEach(causeId => {
+              addConditionRecursive(causeId, false, newList);
+            });
+          }
+          return newList;
+        };
+
+        const removeConditionRecursive = (id: string, isManual: boolean, list: ActiveCondition[]) => {
+          const index = list.findIndex(ac => ac.conditionId === id);
+          if (index === -1) return list;
+
+          if (isManual) {
+            list[index].isManual = false;
+          }
+
+          // A condition should be removed if:
+          // 1. It's not manual
+          // 2. AND it's not caused by any OTHER active condition
+          const isStillCaused = (targetId: string, currentList: ActiveCondition[]) => {
+            return currentList.some(ac => {
+              if (ac.conditionId === targetId) return false;
+              const condData = conditions.find(cond => cond.id === ac.conditionId);
+              return condData?.causes?.includes(targetId);
+            });
+          };
+
+          const toCheck = [id];
+          while (toCheck.length > 0) {
+            const currentId = toCheck.shift()!;
+            const idx = list.findIndex(ac => ac.conditionId === currentId);
+            if (idx !== -1 && !list[idx].isManual && !isStillCaused(currentId, list)) {
+              const condData = conditions.find(cond => cond.id === currentId);
+              list.splice(idx, 1);
+              if (condData?.causes) {
+                toCheck.push(...condData.causes);
+              }
+            }
+          }
+          return list;
+        };
+
+        if (!isCurrentlyActive) {
+          // Adding
+          newActiveConditions = addConditionRecursive(conditionId, true, newActiveConditions);
+        } else {
+          // Removing
+          newActiveConditions = removeConditionRecursive(conditionId, true, newActiveConditions);
+        }
+
+        return { ...c, activeConditions: newActiveConditions };
+      });
+    });
   };
 
   const updateConditionDuration = (combatantId: string, conditionId: string, delta: number) => {
@@ -292,14 +354,42 @@ export default function App() {
     if (endingCombatant) {
       setCombatants(prev => prev.map(c => {
         if (c.id !== endingCombatant.id) return c;
+        
+        let newConditions = c.activeConditions
+          .map(ac => ({
+            ...ac,
+            remainingTurns: ac.remainingTurns !== null ? ac.remainingTurns - 1 : null
+          }))
+          .filter(ac => ac.remainingTurns === null || ac.remainingTurns > 0);
+
+        // After duration removal, we need to re-check dependencies
+        // If a manual condition expired, its caused conditions might need to go
+        const isStillCaused = (targetId: string, currentList: ActiveCondition[]) => {
+          return currentList.some(ac => {
+            const condData = conditions.find(cond => cond.id === ac.conditionId);
+            return condData?.causes?.includes(targetId);
+          });
+        };
+
+        const cleanupDependencies = (list: ActiveCondition[]) => {
+          let changed = true;
+          while (changed) {
+            changed = false;
+            for (let i = 0; i < list.length; i++) {
+              const ac = list[i];
+              if (!ac.isManual && !isStillCaused(ac.conditionId, list)) {
+                list.splice(i, 1);
+                changed = true;
+                break;
+              }
+            }
+          }
+          return list;
+        };
+
         return {
           ...c,
-          activeConditions: c.activeConditions
-            .map(ac => ({
-              ...ac,
-              remainingTurns: ac.remainingTurns !== null ? ac.remainingTurns - 1 : null
-            }))
-            .filter(ac => ac.remainingTurns === null || ac.remainingTurns > 0)
+          activeConditions: cleanupDependencies(newConditions)
         };
       }));
     }
@@ -342,7 +432,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col font-sans">
+    <div className="min-h-screen flex flex-col font-sans overflow-x-hidden">
       {/* Header */}
       <header className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -688,7 +778,7 @@ export default function App() {
                               {currentCombatant.type}
                             </div>
 
-                            <h2 className="text-4xl md:text-6xl font-display font-black tracking-tighter text-white drop-shadow-2xl line-clamp-1">
+                            <h2 className="text-4xl md:text-6xl font-display font-black tracking-tighter text-white drop-shadow-2xl line-clamp-1 break-all px-4">
                               {currentCombatant.name}
                             </h2>
 
@@ -716,7 +806,7 @@ export default function App() {
                             </div>
 
                             {/* Conditions in Combat Mode */}
-                            <div className="w-full max-w-xl space-y-4">
+                            <div className="w-full max-w-xl space-y-4 px-2">
                               <div className="flex items-center justify-between px-2">
                                 <div className="flex items-center gap-2">
                                   <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Condições Aplicadas</span>
@@ -724,74 +814,108 @@ export default function App() {
                                     {currentCombatant.activeConditions.length}
                                   </span>
                                 </div>
-                                <button 
-                                  onClick={() => setIsConditionsMinimized(!isConditionsMinimized)}
-                                  className="text-[10px] font-bold text-primary hover:text-white transition-colors uppercase tracking-widest flex items-center gap-1"
-                                >
-                                  {isConditionsMinimized ? 'Expandir' : 'Minimizar'}
-                                  {isConditionsMinimized ? <ChevronRight size={12} /> : <ArrowDown size={12} />}
-                                </button>
+                                <div className="flex items-center gap-4">
+                                  <button 
+                                    onClick={() => setShowOnlyFinalPenalties(!showOnlyFinalPenalties)}
+                                    className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 transition-colors ${showOnlyFinalPenalties ? 'text-primary' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                    title="Alternar entre ver todas as condições ou apenas o resultado final"
+                                  >
+                                    {showOnlyFinalPenalties ? 'Ver Tudo' : 'Limpar UI'}
+                                  </button>
+                                  <button 
+                                    onClick={() => setIsConditionsMinimized(!isConditionsMinimized)}
+                                    className="text-[10px] font-bold text-zinc-400 hover:text-white transition-colors uppercase tracking-widest flex items-center gap-1"
+                                  >
+                                    {isConditionsMinimized ? 'Expandir' : 'Minimizar'}
+                                    {isConditionsMinimized ? <ChevronRight size={12} /> : <ArrowDown size={12} />}
+                                  </button>
+                                </div>
                               </div>
 
                               {!isConditionsMinimized && (
                                 <div className="space-y-4">
-                                  <div className="flex flex-wrap justify-center gap-2">
-                                    {conditions.map(cond => {
-                                      const active = currentCombatant.activeConditions.find(ac => ac.conditionId === cond.id);
-                                      return (
-                                        <div key={cond.id} className="flex flex-col gap-1">
-                                          <button
-                                            onClick={() => toggleCondition(currentCombatant.id, cond.id)}
-                                            className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all border flex items-center gap-2 ${
-                                              active
-                                                ? 'bg-primary border-primary text-white shadow-[0_0_15px_rgba(255,52,99,0.4)]'
-                                                : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300'
-                                            }`}
-                                          >
-                                            {active && <Zap size={10} className="fill-current" />}
-                                            {cond.name}
-                                          </button>
-                                          {active && (
-                                            <div className="flex items-center justify-center gap-1 bg-zinc-900 rounded-lg border border-zinc-800 p-1">
-                                              <button 
-                                                onClick={() => updateConditionDuration(currentCombatant.id, cond.id, -1)}
-                                                className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-white"
-                                              >
-                                                <Minus size={10} />
-                                              </button>
-                                              <span className="text-[9px] font-mono text-zinc-300 min-w-[20px] text-center">
-                                                {active.remainingTurns === null ? '∞' : `${active.remainingTurns}t`}
-                                              </span>
-                                              <button 
-                                                onClick={() => updateConditionDuration(currentCombatant.id, cond.id, 1)}
-                                                className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-white"
-                                              >
-                                                <Plus size={10} />
-                                              </button>
-                                            </div>
-                                          )}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
+                                  {!showOnlyFinalPenalties && (
+                                    <div className="flex flex-wrap justify-center gap-2">
+                                      {conditions.map(cond => {
+                                        const active = currentCombatant.activeConditions.find(ac => ac.conditionId === cond.id);
+                                        return (
+                                          <div key={cond.id} className="flex flex-col gap-1 relative">
+                                            <button
+                                              onMouseEnter={() => setHoveredCondition(cond.id)}
+                                              onMouseLeave={() => setHoveredCondition(null)}
+                                              onClick={() => toggleCondition(currentCombatant.id, cond.id)}
+                                              className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all border flex items-center gap-2 ${
+                                                active
+                                                  ? active.isManual 
+                                                    ? 'bg-primary border-primary text-white shadow-[0_0_15px_rgba(255,52,99,0.4)]'
+                                                    : 'bg-zinc-800 border-zinc-700 text-zinc-300'
+                                                  : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300'
+                                              }`}
+                                            >
+                                              {active && <Zap size={10} className={active.isManual ? "fill-current" : "text-zinc-500"} />}
+                                              {cond.name}
+                                              {!active?.isManual && active && <span className="text-[8px] opacity-50">(Auto)</span>}
+                                            </button>
+                                            
+                                            <AnimatePresence>
+                                              {hoveredCondition === cond.id && (
+                                                <motion.div
+                                                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                  className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-[70] pointer-events-none"
+                                                >
+                                                  <div className="text-[10px] font-bold text-primary mb-1 uppercase tracking-wider">{cond.name}</div>
+                                                  <div className="text-[9px] text-zinc-400 leading-tight">{cond.description}</div>
+                                                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-zinc-900" />
+                                                </motion.div>
+                                              )}
+                                            </AnimatePresence>
+
+                                            {active && active.isManual && (
+                                              <div className="flex items-center justify-center gap-1 bg-zinc-900 rounded-lg border border-zinc-800 p-1">
+                                                <button 
+                                                  onClick={() => updateConditionDuration(currentCombatant.id, cond.id, -1)}
+                                                  className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-white"
+                                                >
+                                                  <Minus size={10} />
+                                                </button>
+                                                <span className="text-[9px] font-mono text-zinc-300 min-w-[20px] text-center">
+                                                  {active.remainingTurns === null ? '∞' : `${active.remainingTurns}t`}
+                                                </span>
+                                                <button 
+                                                  onClick={() => updateConditionDuration(currentCombatant.id, cond.id, 1)}
+                                                  className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-white"
+                                                >
+                                                  <Plus size={10} />
+                                                </button>
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
 
                                   {/* Consolidated Penalties */}
                                   {currentCombatant.activeConditions.length > 0 && (
-                                    <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-2xl p-4 text-left">
+                                    <div className={`bg-zinc-900/50 border border-zinc-800/50 rounded-2xl p-4 text-left transition-all ${showOnlyFinalPenalties ? 'ring-2 ring-primary/20' : ''}`}>
                                       <div className="flex flex-col gap-4">
-                                        <div>
-                                          <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest mb-2">Condições Ativas</div>
-                                          <div className="flex flex-wrap gap-2">
-                                            {currentCombatant.activeConditions.map(ac => {
-                                              const cond = conditions.find(cn => cn.id === ac.conditionId);
-                                              return (
-                                                <span key={ac.conditionId} className="px-2 py-0.5 bg-zinc-800 text-zinc-300 text-[10px] font-bold rounded-md border border-zinc-700">
-                                                  {cond?.name}
-                                                </span>
-                                              );
-                                            })}
+                                        {!showOnlyFinalPenalties && (
+                                          <div>
+                                            <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest mb-2">Condições Ativas</div>
+                                            <div className="flex flex-wrap gap-2">
+                                              {currentCombatant.activeConditions.map(ac => {
+                                                const cond = conditions.find(cn => cn.id === ac.conditionId);
+                                                return (
+                                                  <span key={ac.conditionId} className={`px-2 py-0.5 text-[10px] font-bold rounded-md border ${ac.isManual ? 'bg-zinc-800 text-zinc-300 border-zinc-700' : 'bg-zinc-900/50 text-zinc-500 border-zinc-800 italic'}`}>
+                                                    {cond?.name} {!ac.isManual && '(Auto)'}
+                                                  </span>
+                                                );
+                                              })}
+                                            </div>
                                           </div>
-                                        </div>
+                                        )}
 
                                         <div>
                                           <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest mb-2">Resultado Final das Penalidades</div>
@@ -806,9 +930,11 @@ export default function App() {
                                         </div>
                                       </div>
                                       
-                                      <p className="mt-4 text-[9px] text-zinc-600 italic leading-tight border-t border-zinc-800 pt-2">
-                                        * Efeitos iguais não se acumulam (aplique o mais severo). Chance de falha acumula até 75%. Fortificação, RD e Cura Acelerada acumulam sem limite.
-                                      </p>
+                                      {!showOnlyFinalPenalties && (
+                                        <p className="mt-4 text-[9px] text-zinc-600 italic leading-tight border-t border-zinc-800 pt-2">
+                                          * Efeitos iguais não se acumulam (aplique o mais severo). Chance de falha acumula até 75%. Fortificação, RD e Cura Acelerada acumulam sem limite.
+                                        </p>
+                                      )}
                                     </div>
                                   )}
                                 </div>
