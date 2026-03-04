@@ -1251,7 +1251,14 @@ export default function App() {
 
       {/* Footer */}
       <footer className="border-t border-zinc-900 bg-zinc-950 p-6 text-center text-zinc-600 text-xs">
-        <p>© 2025 Gerenciador de Iniciativa • Isso é apenas um teste</p>
+        <a 
+          href="https://youtu.be/dQw4w9WgXcQ?si=DuFasDHRX3rQ7oGA" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="hover:text-primary transition-colors"
+        >
+          © 2025 Gerenciador de Iniciativa • Isso é apenas um teste
+        </a>
       </footer>
     </div>
   );
