@@ -19,11 +19,13 @@ export interface Condition {
   name: string;
   description: string;
   summary?: string;
+  causes?: string[];
 }
 
 export interface ActiveCondition {
   conditionId: string;
   remainingTurns: number | null; // null means infinite/scene
+  isManual?: boolean;
 }
 
 export interface Combatant {
