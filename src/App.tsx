@@ -440,28 +440,28 @@ export default function App() {
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
               <Zap className="text-white fill-current" size={24} />
             </div>
-            <h1 className="text-xl font-display font-bold tracking-tight">
+            <h1 className="text-lg sm:text-xl font-display font-bold tracking-tight">
               Iniciativa <span className="text-primary">& Estilo</span>
             </h1>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <button
               onClick={saveState}
-              className="p-2 text-zinc-500 hover:text-white transition-colors"
+              className="p-1.5 sm:p-2 text-zinc-500 hover:text-white transition-colors"
               title="Salvar Combate"
             >
-              <Save size={20} />
+              <Save size={18} className="sm:w-5 sm:h-5" />
             </button>
             <button
               onClick={loadState}
-              className="p-2 text-zinc-500 hover:text-white transition-colors"
+              className="p-1.5 sm:p-2 text-zinc-500 hover:text-white transition-colors"
               title="Carregar Combate"
             >
-              <Download size={20} />
+              <Download size={18} className="sm:w-5 sm:h-5" />
             </button>
-            <div className="w-px h-6 bg-zinc-800 mx-2" />
-            <nav className="flex gap-1 bg-zinc-950 p-1 rounded-full border border-zinc-800">
+            <div className="w-px h-6 bg-zinc-800 mx-1 sm:mx-2" />
+            <nav className="flex gap-0.5 sm:gap-1 bg-zinc-950 p-1 rounded-full border border-zinc-800">
             {[
               { id: 'combat', label: 'Combate', icon: Play },
               { id: 'conditions', label: 'Condições', icon: Info },
@@ -470,14 +470,14 @@ export default function App() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all ${
                   activeTab === tab.id 
                     ? 'bg-zinc-800 text-white shadow-inner' 
                     : 'text-zinc-500 hover:text-zinc-300'
                 }`}
               >
-                <tab.icon size={16} />
-                {tab.label}
+                <tab.icon size={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline sm:inline">{tab.label}</span>
               </button>
             ))}
           </nav>
@@ -500,8 +500,8 @@ export default function App() {
                   {/* Setup Form */}
                   <div className="lg:col-span-1 space-y-4">
                     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl">
-                      <h2 className="text-lg font-display font-semibold mb-4 flex items-center gap-2">
-                        <Plus size={20} className="text-primary" />
+                      <h2 className="text-base sm:text-lg font-display font-semibold mb-4 flex items-center gap-2">
+                        <Plus size={18} className="text-primary" />
                         Adicionar Combatente
                       </h2>
                       <div className="space-y-4">
@@ -594,12 +594,12 @@ export default function App() {
 
                   {/* Initiative List */}
                   <div className="lg:col-span-2 space-y-4">
-                    <div className="flex items-center justify-between px-2">
-                      <h2 className="text-lg font-display font-semibold flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between px-2 gap-2">
+                      <h2 className="text-base sm:text-lg font-display font-semibold flex items-center gap-2">
                         Ordem de Iniciativa
                         <span className="bg-zinc-800 text-zinc-400 text-xs px-2 py-0.5 rounded-full">{combatants.length}</span>
                       </h2>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 sm:gap-3">
                         {combatants.length > 5 && (
                           <button 
                             onClick={scrollToNext}
@@ -675,31 +675,35 @@ export default function App() {
                               </div>
                             </div>
 
-                            <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4 border-t border-zinc-800/50 sm:border-0 pt-3 sm:pt-0">
-                              <div className="flex items-center gap-1 flex-wrap justify-center">
-                                {[-10, -5, -1].map(v => (
-                                  <button
-                                    key={v}
-                                    onClick={() => updateInitiative(c.id, v)}
-                                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-950 hover:bg-red-500/20 text-zinc-500 hover:text-red-500 text-[10px] font-bold transition-all"
-                                  >
-                                    {v}
-                                  </button>
-                                ))}
-                                <div className="w-px h-6 bg-zinc-800 mx-1" />
-                                {[1, 5, 10].map(v => (
-                                  <button
-                                    key={v}
-                                    onClick={() => updateInitiative(c.id, v)}
-                                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-950 hover:bg-green-900/30 text-zinc-500 hover:text-green-400 text-[10px] font-bold transition-all"
-                                  >
-                                    +{v}
-                                  </button>
-                                ))}
+                            <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4 border-t border-zinc-800/50 sm:border-0 pt-3 sm:pt-0 w-full sm:w-auto">
+                              <div className="flex items-center gap-1 justify-center flex-1 sm:flex-none">
+                                <div className="flex items-center gap-1">
+                                  {[-10, -5, -1].map(v => (
+                                    <button
+                                      key={v}
+                                      onClick={() => updateInitiative(c.id, v)}
+                                      className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg bg-zinc-950 hover:bg-red-500/20 text-zinc-500 hover:text-red-500 text-[10px] font-bold transition-all"
+                                    >
+                                      {v}
+                                    </button>
+                                  ))}
+                                </div>
+                                <div className="w-px h-5 bg-zinc-800 mx-0.5" />
+                                <div className="flex items-center gap-1">
+                                  {[1, 5, 10].map(v => (
+                                    <button
+                                      key={v}
+                                      onClick={() => updateInitiative(c.id, v)}
+                                      className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg bg-zinc-950 hover:bg-green-900/30 text-zinc-500 hover:text-green-400 text-[10px] font-bold transition-all"
+                                    >
+                                      +{v}
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
                               <button
                                 onClick={() => removeCombatant(c.id)}
-                                className="p-2 text-zinc-600 hover:text-primary transition-colors sm:opacity-0 sm:group-hover:opacity-100"
+                                className="p-2 text-zinc-600 hover:text-primary transition-colors sm:opacity-0 sm:group-hover:opacity-100 shrink-0"
                               >
                                 <Trash2 size={18} />
                               </button>
@@ -778,7 +782,7 @@ export default function App() {
                               {currentCombatant.type}
                             </div>
 
-                            <h2 className="text-4xl md:text-6xl font-display font-black tracking-tighter text-white drop-shadow-2xl line-clamp-1 break-all px-4">
+                            <h2 className="text-2xl sm:text-4xl md:text-6xl font-display font-black tracking-tighter text-white drop-shadow-2xl line-clamp-2 break-all px-4">
                               {currentCombatant.name}
                             </h2>
 
