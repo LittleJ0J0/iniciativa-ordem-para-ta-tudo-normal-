@@ -1249,16 +1249,10 @@ export default function App() {
         )}
       </AnimatePresence>
 
-  {/* Footer */}
+      {/* Footer */}
       <footer className="border-t border-zinc-900 bg-zinc-950 p-6 text-center text-zinc-600 text-xs">
-        <p>
-          <a 
-            href="https://youtu.be/dQw4w9WgXcQ?si=DuFasDHRX3rQ7oGA" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="hover:text-zinc-400 transition-colors"
-          >
-            © 2025 Gerenciador de Iniciativa • Isso é apenas um teste
-          </a>
-        </p>
+        <p>© 2025 Gerenciador de Iniciativa • Isso é apenas um teste</p>
       </footer>
+    </div>
+  );
+}
