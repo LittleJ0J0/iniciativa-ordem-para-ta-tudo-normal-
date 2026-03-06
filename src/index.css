@@ -37,25 +37,25 @@
 
 [data-theme='light'] {
   --zinc-950: #ffffff;
-  --zinc-900: #f8fafc;
+  --zinc-900: #f1f5f9;
   --zinc-800: #e2e8f0;
   --zinc-700: #cbd5e1;
-  --zinc-600: #94a3b8;
-  --zinc-500: #64748b;
-  --zinc-400: #475569;
-  --zinc-300: #334155;
-  --zinc-200: #1e293b;
-  --zinc-100: #0f172a;
-  --zinc-50: #020617;
+  --zinc-600: #475569; /* Darker for better contrast */
+  --zinc-500: #334155; /* Darker for better contrast */
+  --zinc-400: #1e293b; /* Darker for better contrast */
+  --zinc-300: #0f172a;
+  --zinc-200: #020617;
+  --zinc-100: #000000;
+  --zinc-50: #000000;
 }
 
 [data-theme='projector'] {
   /* High Contrast Light Mode for Projectors */
   --zinc-950: #ffffff;
   --zinc-900: #ffffff;
-  --zinc-850: #f0f0f0;
-  --zinc-800: #000000;
-  --zinc-700: #000000;
+  --zinc-850: #ffffff;
+  --zinc-800: #f8fafc; /* Very light gray for secondary backgrounds */
+  --zinc-700: #e2e8f0; /* Light gray for borders */
   --zinc-600: #000000;
   --zinc-500: #000000;
   --zinc-400: #000000;
@@ -64,35 +64,49 @@
   --zinc-100: #000000;
   --zinc-50: #000000;
   
-  --color-primary: #e11d48; /* Stronger Red */
+  --color-primary: #be123c; /* Even darker red for better visibility */
 }
 
 [data-theme='projector'] body {
-  font-weight: 500;
-  -webkit-font-smoothing: none; /* Sharper text on some projectors */
+  font-weight: 600; /* Bolder text for projector */
+  -webkit-font-smoothing: none;
 }
 
 [data-theme='projector'] .border,
 [data-theme='projector'] .border-t,
 [data-theme='projector'] .border-b,
 [data-theme='projector'] .border-l,
-[data-theme='projector'] .border-r {
+[data-theme='projector'] .border-r,
+[data-theme='projector'] .border-zinc-800,
+[data-theme='projector'] .border-zinc-700 {
   border-width: 2px !important;
   border-color: #000000 !important;
 }
 
 [data-theme='projector'] .shadow-xl,
 [data-theme='projector'] .shadow-2xl,
-[data-theme='projector'] .shadow-lg {
+[data-theme='projector'] .shadow-lg,
+[data-theme='projector'] .shadow-md,
+[data-theme='projector'] .shadow-sm {
   box-shadow: none !important;
-  border: 3px solid #000 !important;
+  border: 2px solid #000000 !important;
 }
 
 [data-theme='projector'] input,
-[data-theme='projector'] button {
-  border-width: 2px !important;
+[data-theme='projector'] button,
+[data-theme='projector'] select {
+  border: 2px solid #000000 !important;
+  background-color: #ffffff !important;
+  color: #000000 !important;
 }
 
+[data-theme='projector'] button.bg-primary {
+  background-color: #be123c !important;
+  color: #ffffff !important;
+}
+
+[data-theme='projector'] .bg-zinc-900,
+[data-theme='projector'] .bg-zinc-950,
 [data-theme='projector'] .bg-zinc-900\/50,
 [data-theme='projector'] .bg-zinc-900\/30,
 [data-theme='projector'] .bg-zinc-950\/50,
@@ -101,16 +115,70 @@
   opacity: 1 !important;
 }
 
+[data-theme='projector'] .text-zinc-400,
 [data-theme='projector'] .text-zinc-500,
 [data-theme='projector'] .text-zinc-600 {
   color: #000000 !important;
-  font-weight: 700;
+  font-weight: 800;
+}
+
+[data-theme='projector'] .text-zinc-100,
+[data-theme='projector'] .text-zinc-200,
+[data-theme='projector'] .text-zinc-300 {
+  color: #000000 !important;
+}
+
+/* Fix for ranks in light/projector modes */
+[data-theme='light'] .style-rank-d,
+[data-theme='projector'] .style-rank-d { color: #64748b; }
+[data-theme='light'] .style-rank-c,
+[data-theme='projector'] .style-rank-c { color: #2563eb; }
+[data-theme='light'] .style-rank-b,
+[data-theme='projector'] .style-rank-b { color: #16a34a; }
+[data-theme='light'] .style-rank-a,
+[data-theme='projector'] .style-rank-a { color: #ca8a04; }
+[data-theme='light'] .style-rank-s,
+[data-theme='projector'] .style-rank-s { color: #ea580c; }
+[data-theme='light'] .style-rank-ss,
+[data-theme='projector'] .style-rank-ss { color: #db2777; }
+[data-theme='light'] .style-rank-sss,
+[data-theme='projector'] .style-rank-sss { color: #e11d48; }
+
+[data-theme='light'] .style-rank-s,
+[data-theme='light'] .style-rank-ss,
+[data-theme='light'] .style-rank-sss,
+[data-theme='projector'] .style-rank-s,
+[data-theme='projector'] .style-rank-ss,
+[data-theme='projector'] .style-rank-sss {
+  animation: none !important;
+  text-shadow: none !important;
 }
 
 @layer base {
   body {
     @apply bg-zinc-950 text-zinc-100 antialiased transition-colors duration-300;
   }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--zinc-800);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--zinc-700);
+}
+
+[data-theme='projector'] .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #000000 !important;
 }
 
 .style-rank-d { color: var(--color-zinc-500); }
@@ -125,6 +193,7 @@
   0%, 100% { text-shadow: 0 0 4px rgba(255, 77, 0, 0.6), 0 -1px 2px rgba(255, 144, 0, 0.4); }
   50% { text-shadow: 0 0 12px rgba(255, 77, 0, 0.8), 0 -4px 8px rgba(255, 144, 0, 0.6), 0 -8px 16px rgba(255, 0, 0, 0.4); }
 }
+
 
 
 
