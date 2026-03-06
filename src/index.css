@@ -5,11 +5,111 @@
   --font-display: "Space Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
   --color-primary: #ff3463;
+
+  /* Overriding Zinc palette with variables for theming */
+  --color-zinc-50: var(--zinc-50);
+  --color-zinc-100: var(--zinc-100);
+  --color-zinc-200: var(--zinc-200);
+  --color-zinc-300: var(--zinc-300);
+  --color-zinc-400: var(--zinc-400);
+  --color-zinc-500: var(--zinc-500);
+  --color-zinc-600: var(--zinc-600);
+  --color-zinc-700: var(--zinc-700);
+  --color-zinc-800: var(--zinc-800);
+  --color-zinc-900: var(--zinc-900);
+  --color-zinc-950: var(--zinc-950);
+}
+
+:root {
+  /* Default Dark Mode (Zinc) */
+  --zinc-50: #fafafa;
+  --zinc-100: #f4f4f5;
+  --zinc-200: #e4e4e7;
+  --zinc-300: #d4d4d8;
+  --zinc-400: #a1a1aa;
+  --zinc-500: #71717a;
+  --zinc-600: #52525b;
+  --zinc-700: #3f3f46;
+  --zinc-800: #27272a;
+  --zinc-900: #18181b;
+  --zinc-950: #09090b;
+}
+
+[data-theme='light'] {
+  --zinc-950: #ffffff;
+  --zinc-900: #f8fafc;
+  --zinc-800: #e2e8f0;
+  --zinc-700: #cbd5e1;
+  --zinc-600: #94a3b8;
+  --zinc-500: #64748b;
+  --zinc-400: #475569;
+  --zinc-300: #334155;
+  --zinc-200: #1e293b;
+  --zinc-100: #0f172a;
+  --zinc-50: #020617;
+}
+
+[data-theme='projector'] {
+  /* High Contrast Light Mode for Projectors */
+  --zinc-950: #ffffff;
+  --zinc-900: #ffffff;
+  --zinc-850: #f0f0f0;
+  --zinc-800: #000000;
+  --zinc-700: #000000;
+  --zinc-600: #000000;
+  --zinc-500: #000000;
+  --zinc-400: #000000;
+  --zinc-300: #000000;
+  --zinc-200: #000000;
+  --zinc-100: #000000;
+  --zinc-50: #000000;
+  
+  --color-primary: #e11d48; /* Stronger Red */
+}
+
+[data-theme='projector'] body {
+  font-weight: 500;
+  -webkit-font-smoothing: none; /* Sharper text on some projectors */
+}
+
+[data-theme='projector'] .border,
+[data-theme='projector'] .border-t,
+[data-theme='projector'] .border-b,
+[data-theme='projector'] .border-l,
+[data-theme='projector'] .border-r {
+  border-width: 2px !important;
+  border-color: #000000 !important;
+}
+
+[data-theme='projector'] .shadow-xl,
+[data-theme='projector'] .shadow-2xl,
+[data-theme='projector'] .shadow-lg {
+  box-shadow: none !important;
+  border: 3px solid #000 !important;
+}
+
+[data-theme='projector'] input,
+[data-theme='projector'] button {
+  border-width: 2px !important;
+}
+
+[data-theme='projector'] .bg-zinc-900\/50,
+[data-theme='projector'] .bg-zinc-900\/30,
+[data-theme='projector'] .bg-zinc-950\/50,
+[data-theme='projector'] .bg-zinc-950\/80 {
+  background-color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+[data-theme='projector'] .text-zinc-500,
+[data-theme='projector'] .text-zinc-600 {
+  color: #000000 !important;
+  font-weight: 700;
 }
 
 @layer base {
   body {
-    @apply bg-zinc-950 text-zinc-100 antialiased;
+    @apply bg-zinc-950 text-zinc-100 antialiased transition-colors duration-300;
   }
 }
 
@@ -25,7 +125,6 @@
   0%, 100% { text-shadow: 0 0 4px rgba(255, 77, 0, 0.6), 0 -1px 2px rgba(255, 144, 0, 0.4); }
   50% { text-shadow: 0 0 12px rgba(255, 77, 0, 0.8), 0 -4px 8px rgba(255, 144, 0, 0.6), 0 -8px 16px rgba(255, 0, 0, 0.4); }
 }
-
 
 
 
