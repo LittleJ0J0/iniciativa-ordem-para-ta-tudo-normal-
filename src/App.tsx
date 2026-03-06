@@ -121,90 +121,185 @@ export default function App() {
   };
 
   const calculateTotalPenalties = (activeConditions: ActiveCondition[]) => {
-    const activeConds = activeConditions.map(ac => conditions.find(c => c.id === ac.conditionId)).filter(Boolean) as Condition[];
+    const activeConds = activeConditions.map(ac => ({
+      ...ac,
+      data: conditions.find(c => c.id === ac.conditionId)
+    })).filter(ac => ac.data) as (ActiveCondition & { data: Condition })[];
     
     let maxDefensePenalty = 0;
+    let defenseSources: string[] = [];
+    
     let maxTestPenalty = 0;
+    let testSources: string[] = [];
+    
     let maxAttackPenalty = 0;
+    let attackSources: string[] = [];
+    
     let maxSkillPenalty = 0;
+    let skillSources: string[] = [];
+    
     let maxReflexPenalty = 0;
+    let reflexSources: string[] = [];
+    
     let maxInitiativePenalty = 0;
+    let initiativeSources: string[] = [];
+    
     let maxPerceptionPenalty = 0;
+    let perceptionSources: string[] = [];
+    
     let peCostIncrease = 0;
+    let peSources: string[] = [];
+    
     let rd = 0;
+    let rdSources: string[] = [];
+    
     let failureChance = 0;
+    let failureSources: string[] = [];
+    
     let fortification = 0;
+    let fortificationSources: string[] = [];
+    
     let curaAcelerada = 0;
-    let recurringDamage: string[] = [];
+    let curaSources: string[] = [];
     
-    const states = new Set<string>();
+    let recurringDamage: { label: string, sourceId: string }[] = [];
+    let stateResults: { label: string, sourceId: string }[] = [];
     
-    activeConds.forEach(cond => {
+    activeConds.forEach(ac => {
+      const cond = ac.data;
       const summary = cond.summary || "";
       
       // Defense
       const defMatch = summary.match(/-(\d+)\s+Defesa/i);
-      if (defMatch) maxDefensePenalty = Math.max(maxDefensePenalty, parseInt(defMatch[1]));
+      if (defMatch) {
+        const val = parseInt(defMatch[1]);
+        if (val > maxDefensePenalty) {
+          maxDefensePenalty = val;
+          defenseSources = [cond.id];
+        } else if (val === maxDefensePenalty && val > 0) {
+          defenseSources.push(cond.id);
+        }
+      }
       
       // d20 Penalties
       const d20Matches = summary.match(/-(\d+)d20/gi);
       if (d20Matches) {
         const val = parseInt(d20Matches[0].match(/\d+/)?.[0] || "0");
-        if (summary.toLowerCase().includes("testes")) maxTestPenalty = Math.max(maxTestPenalty, val);
-        if (summary.toLowerCase().includes("ataque")) maxAttackPenalty = Math.max(maxAttackPenalty, val);
-        if (summary.toLowerCase().includes("perícia")) maxSkillPenalty = Math.max(maxSkillPenalty, val);
-        if (summary.toLowerCase().includes("reflexos")) maxReflexPenalty = Math.max(maxReflexPenalty, val);
-        if (summary.toLowerCase().includes("iniciativa")) maxInitiativePenalty = Math.max(maxInitiativePenalty, val);
-        if (summary.toLowerCase().includes("percepção")) maxPerceptionPenalty = Math.max(maxPerceptionPenalty, val);
+        
+        const updateD20 = (currentMax: number, currentSources: string[], type: string) => {
+          if (summary.toLowerCase().includes(type)) {
+            if (val > currentMax) {
+              return { max: val, sources: [cond.id] };
+            } else if (val === currentMax && val > 0) {
+              return { max: currentMax, sources: [...currentSources, cond.id] };
+            }
+          }
+          return { max: currentMax, sources: currentSources };
+        };
+
+        const testRes = updateD20(maxTestPenalty, testSources, "testes");
+        maxTestPenalty = testRes.max; testSources = testRes.sources;
+
+        const attackRes = updateD20(maxAttackPenalty, attackSources, "ataque");
+        maxAttackPenalty = attackRes.max; attackSources = attackRes.sources;
+
+        const skillRes = updateD20(maxSkillPenalty, skillSources, "perícia");
+        maxSkillPenalty = skillRes.max; skillSources = skillRes.sources;
+
+        const reflexRes = updateD20(maxReflexPenalty, reflexSources, "reflexos");
+        maxReflexPenalty = reflexRes.max; reflexSources = reflexRes.sources;
+
+        const initRes = updateD20(maxInitiativePenalty, initiativeSources, "iniciativa");
+        maxInitiativePenalty = initRes.max; initiativeSources = initRes.sources;
+
+        const percRes = updateD20(maxPerceptionPenalty, perceptionSources, "percepção");
+        maxPerceptionPenalty = percRes.max; perceptionSources = percRes.sources;
       }
       
       // PE Cost
       const peMatch = summary.match(/\+(\d+)\s+Custo\s+PE/i);
-      if (peMatch) peCostIncrease += parseInt(peMatch[1]);
+      if (peMatch) {
+        peCostIncrease += parseInt(peMatch[1]);
+        peSources.push(cond.id);
+      }
       
       // RD
       const rdMatch = summary.match(/RD\s+(\d+)/i);
-      if (rdMatch) rd += parseInt(rdMatch[1]);
+      if (rdMatch) {
+        rd += parseInt(rdMatch[1]);
+        rdSources.push(cond.id);
+      }
 
       // Failure Chance
       const failMatch = summary.match(/(\d+)%\s+chance\s+de\s+falha/i);
-      if (failMatch) failureChance += parseInt(failMatch[1]);
+      if (failMatch) {
+        failureChance += parseInt(failMatch[1]);
+        failureSources.push(cond.id);
+      }
 
       // Fortification
       const fortMatch = summary.match(/fortificação\s+(\d+)%/i);
-      if (fortMatch) fortification += parseInt(fortMatch[1]);
+      if (fortMatch) {
+        fortification += parseInt(fortMatch[1]);
+        fortificationSources.push(cond.id);
+      }
 
       // Cura Acelerada
       const curaMatch = summary.match(/cura\s+acelerada\s+(\d+)/i);
-      if (curaMatch) curaAcelerada += parseInt(curaMatch[1]);
+      if (curaMatch) {
+        curaAcelerada += parseInt(curaMatch[1]);
+        curaSources.push(cond.id);
+      }
       
       // Recurring Damage
       const dmgMatch = summary.match(/\d+d\d+\s+Dano/i);
-      if (dmgMatch) recurringDamage.push(dmgMatch[0]);
+      if (dmgMatch) {
+        recurringDamage.push({ label: dmgMatch[0], sourceId: cond.id });
+      }
       
       // States
       const commonStates = ["Desprevenido", "Imóvel", "Lento", "Vulnerável", "Indefeso", "Inconsciente", "Sem ações", "Sem fôlego", "Morrendo", "Machucado", "Caído", "Cego", "Confuso", "Debilitado", "Doente", "Em chamas", "Enjoado", "Enredado", "Envenenado", "Esmorecido", "Exausto", "Fascinado", "Fatigado", "Fraco", "Frustrado", "Paralisado", "Pasmo", "Petrificado", "Sangrando", "Surdo", "Surpreendido"];
       commonStates.forEach(s => {
-        if (summary.includes(s) || cond.name.includes(s)) states.add(s);
+        if (summary.includes(s) || cond.name.includes(s)) {
+          stateResults.push({ label: s, sourceId: cond.id });
+        }
       });
     });
     
-    const results: string[] = [];
-    if (maxDefensePenalty > 0) results.push(`-${maxDefensePenalty} Defesa`);
-    if (maxTestPenalty > 0) results.push(`-${maxTestPenalty}d20 em Testes`);
-    if (maxAttackPenalty > 0) results.push(`-${maxAttackPenalty}d20 em Ataque`);
-    if (maxSkillPenalty > 0) results.push(`-${maxSkillPenalty}d20 em Perícia`);
-    if (maxReflexPenalty > 0) results.push(`-${maxReflexPenalty}d20 em Reflexos`);
-    if (maxInitiativePenalty > 0) results.push(`-${maxInitiativePenalty}d20 em Iniciativa`);
-    if (maxPerceptionPenalty > 0) results.push(`-${maxPerceptionPenalty}d20 em Percepção`);
-    if (peCostIncrease > 0) results.push(`+${peCostIncrease} Custo PE`);
-    if (rd > 0) results.push(`RD ${rd}`);
-    if (failureChance > 0) results.push(`${Math.min(75, failureChance)}% Chance de Falha`);
-    if (fortification > 0) results.push(`Fortificação ${fortification}%`);
-    if (curaAcelerada > 0) results.push(`Cura Acelerada ${curaAcelerada}`);
-    recurringDamage.forEach(d => results.push(d));
-    states.forEach(s => results.push(s));
+    const results: { label: string, sourceIds: string[] }[] = [];
+    if (maxDefensePenalty > 0) results.push({ label: `-${maxDefensePenalty} Defesa`, sourceIds: defenseSources });
+    if (maxTestPenalty > 0) results.push({ label: `-${maxTestPenalty}d20 em Testes`, sourceIds: testSources });
+    if (maxAttackPenalty > 0) results.push({ label: `-${maxAttackPenalty}d20 em Ataque`, sourceIds: attackSources });
+    if (maxSkillPenalty > 0) results.push({ label: `-${maxSkillPenalty}d20 em Perícia`, sourceIds: skillSources });
+    if (maxReflexPenalty > 0) results.push({ label: `-${maxReflexPenalty}d20 em Reflexos`, sourceIds: reflexSources });
+    if (maxInitiativePenalty > 0) results.push({ label: `-${maxInitiativePenalty}d20 em Iniciativa`, sourceIds: initiativeSources });
+    if (maxPerceptionPenalty > 0) results.push({ label: `-${maxPerceptionPenalty}d20 em Percepção`, sourceIds: perceptionSources });
+    if (peCostIncrease > 0) results.push({ label: `+${peCostIncrease} Custo PE`, sourceIds: peSources });
+    if (rd > 0) results.push({ label: `RD ${rd}`, sourceIds: rdSources });
+    if (failureChance > 0) results.push({ label: `${Math.min(75, failureChance)}% Chance de Falha`, sourceIds: failureSources });
+    if (fortification > 0) results.push({ label: `Fortificação ${fortification}%`, sourceIds: fortificationSources });
+    if (curaAcelerada > 0) results.push({ label: `Cura Acelerada ${curaAcelerada}`, sourceIds: curaSources });
     
+    recurringDamage.forEach(d => results.push({ label: d.label, sourceIds: [d.sourceId] }));
+    
+    // Group states by name to avoid duplicates but keep all sources
+    const stateMap = new Map<string, string[]>();
+    stateResults.forEach(sr => {
+      const existing = stateMap.get(sr.label) || [];
+      stateMap.set(sr.label, [...existing, sr.sourceId]);
+    });
+    stateMap.forEach((ids, label) => results.push({ label, sourceIds: ids }));
+    
+    // Ensure all conditions are represented
+    const representedIds = new Set<string>();
+    results.forEach(r => r.sourceIds.forEach(id => representedIds.add(id)));
+    
+    activeConds.forEach(ac => {
+      if (!representedIds.has(ac.conditionId)) {
+        results.push({ label: ac.data.name, sourceIds: [ac.conditionId] });
+      }
+    });
+
     return results;
   };
 
@@ -925,9 +1020,38 @@ export default function App() {
                                           <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest mb-2">Resultado Final das Penalidades</div>
                                           <div className="flex flex-wrap gap-x-4 gap-y-2">
                                             {calculateTotalPenalties(currentCombatant.activeConditions).map((penalty, idx) => (
-                                              <div key={idx} className="flex items-center gap-2">
+                                              <div 
+                                                key={idx} 
+                                                className="flex items-center gap-2 relative group/penalty"
+                                                onMouseEnter={() => setHoveredCondition(penalty.sourceIds[0])}
+                                                onMouseLeave={() => setHoveredCondition(null)}
+                                              >
                                                 <div className="w-1 h-1 rounded-full bg-primary" />
-                                                <span className="text-xs text-zinc-300 font-bold">{penalty}</span>
+                                                <span className="text-xs text-zinc-300 font-bold cursor-help border-b border-dashed border-zinc-700 hover:border-primary transition-colors">
+                                                  {penalty.label}
+                                                </span>
+
+                                                <AnimatePresence>
+                                                  {hoveredCondition && penalty.sourceIds.includes(hoveredCondition) && (
+                                                    <motion.div
+                                                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                      className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-[80] pointer-events-none"
+                                                    >
+                                                      {penalty.sourceIds.map(sid => {
+                                                        const cond = conditions.find(c => c.id === sid);
+                                                        return (
+                                                          <div key={sid} className="mb-2 last:mb-0">
+                                                            <div className="text-[10px] font-bold text-primary mb-1 uppercase tracking-wider">{cond?.name}</div>
+                                                            <div className="text-[9px] text-zinc-400 leading-tight">{cond?.description}</div>
+                                                          </div>
+                                                        );
+                                                      })}
+                                                      <div className="absolute top-full left-4 border-8 border-transparent border-t-zinc-900" />
+                                                    </motion.div>
+                                                  )}
+                                                </AnimatePresence>
                                               </div>
                                             ))}
                                           </div>
