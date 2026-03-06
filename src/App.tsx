@@ -34,6 +34,7 @@ export default function App() {
   const [isConditionsMinimized, setIsConditionsMinimized] = useState(false);
   const [showOnlyFinalPenalties, setShowOnlyFinalPenalties] = useState(false);
   const [hoveredCondition, setHoveredCondition] = useState<string | null>(null);
+  const [hoveredPenaltyIdx, setHoveredPenaltyIdx] = useState<number | null>(null);
   
   // Form state
   const [newName, setNewName] = useState('');
@@ -857,7 +858,26 @@ export default function App() {
                         <motion.div
                           key={currentCombatant.id}
                           initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
+                          animate={{ 
+                            opacity: 1, 
+                            y: 0,
+                            boxShadow: [
+                              "0 0 0px rgba(0,0,0,0)",
+                              currentCombatant.type === CombatantType.PLAYER ? "0 0 30px rgba(59, 130, 246, 0.15)" :
+                              currentCombatant.type === CombatantType.ALLY ? "0 0 30px rgba(34, 197, 94, 0.15)" :
+                              "0 0 30px rgba(239, 68, 68, 0.15)",
+                              "0 0 0px rgba(0,0,0,0)"
+                            ]
+                          }}
+                          transition={{
+                            opacity: { duration: 0.4 },
+                            y: { duration: 0.4 },
+                            boxShadow: { 
+                              duration: 3, 
+                              repeat: Infinity, 
+                              ease: "easeInOut" 
+                            }
+                          }}
                           exit={{ opacity: 0, y: -20 }}
                           className="bg-zinc-950 border border-zinc-800 rounded-[2rem] p-4 md:p-6 shadow-[0_0_100px_rgba(0,0,0,1)] relative overflow-hidden ring-1 ring-zinc-800/50 flex flex-col gap-6"
                         >
@@ -1023,8 +1043,8 @@ export default function App() {
                                               <div 
                                                 key={idx} 
                                                 className="flex items-center gap-2 relative group/penalty"
-                                                onMouseEnter={() => setHoveredCondition(penalty.sourceIds[0])}
-                                                onMouseLeave={() => setHoveredCondition(null)}
+                                                onMouseEnter={() => setHoveredPenaltyIdx(idx)}
+                                                onMouseLeave={() => setHoveredPenaltyIdx(null)}
                                               >
                                                 <div className="w-1 h-1 rounded-full bg-primary" />
                                                 <span className="text-xs text-zinc-300 font-bold cursor-help border-b border-dashed border-zinc-700 hover:border-primary transition-colors">
@@ -1032,7 +1052,7 @@ export default function App() {
                                                 </span>
 
                                                 <AnimatePresence>
-                                                  {hoveredCondition && penalty.sourceIds.includes(hoveredCondition) && (
+                                                  {hoveredPenaltyIdx === idx && (
                                                     <motion.div
                                                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                                       animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1041,10 +1061,35 @@ export default function App() {
                                                     >
                                                       {penalty.sourceIds.map(sid => {
                                                         const cond = conditions.find(c => c.id === sid);
+                                                        const activeCond = currentCombatant.activeConditions.find(ac => ac.conditionId === sid);
+                                                        
+                                                        // Find what causes this condition if it's auto
+                                                        let causingCondData = null;
+                                                        if (activeCond && !activeCond.isManual) {
+                                                          const causingCond = currentCombatant.activeConditions.find(ac => {
+                                                            const cData = conditions.find(cd => cd.id === ac.conditionId);
+                                                            return cData?.causes?.includes(sid);
+                                                          });
+                                                          if (causingCond) {
+                                                            causingCondData = conditions.find(cd => cd.id === causingCond.conditionId);
+                                                          }
+                                                        }
+
                                                         return (
                                                           <div key={sid} className="mb-2 last:mb-0">
-                                                            <div className="text-[10px] font-bold text-primary mb-1 uppercase tracking-wider">{cond?.name}</div>
+                                                            <div className="text-[10px] font-bold text-primary mb-1 uppercase tracking-wider">
+                                                              {cond?.name} 
+                                                              {activeCond && !activeCond.isManual && (
+                                                                <span className="ml-1 text-[8px] opacity-70 lowercase font-normal italic text-zinc-500">(Auto)</span>
+                                                              )}
+                                                            </div>
                                                             <div className="text-[9px] text-zinc-400 leading-tight">{cond?.description}</div>
+                                                            {causingCondData && (
+                                                              <div className="mt-1 flex items-center gap-1 text-[8px] text-zinc-500 italic">
+                                                                <Zap size={8} className="text-zinc-600" />
+                                                                Causado por: <span className="text-zinc-400 font-bold">{causingCondData.name}</span>
+                                                              </div>
+                                                            )}
                                                           </div>
                                                         );
                                                       })}
@@ -1056,6 +1101,31 @@ export default function App() {
                                             ))}
                                           </div>
                                         </div>
+
+                                        {/* Expiring Conditions Section */}
+                                        {currentCombatant.activeConditions.some(ac => ac.remainingTurns !== null && ac.remainingTurns < 3) && (
+                                          <div className="mt-4 pt-4 border-t border-zinc-800/50">
+                                            <div className="flex items-center gap-2 mb-2">
+                                              <RotateCcw size={10} className="text-amber-500" />
+                                              <span className="text-[9px] font-bold text-amber-500/70 uppercase tracking-widest">Expirando em Breve</span>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                              {currentCombatant.activeConditions
+                                                .filter(ac => ac.remainingTurns !== null && ac.remainingTurns < 3)
+                                                .map(ac => {
+                                                  const cond = conditions.find(cn => cn.id === ac.conditionId);
+                                                  return (
+                                                    <div key={ac.conditionId} className="flex items-center gap-1.5 px-2 py-1 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                                                      <span className="text-[10px] font-bold text-amber-200/80">{cond?.name}</span>
+                                                      <span className="text-[9px] font-mono text-amber-500 font-bold bg-amber-500/10 px-1 rounded">
+                                                        {ac.remainingTurns}t
+                                                      </span>
+                                                    </div>
+                                                  );
+                                                })}
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
                                       
                                       {!showOnlyFinalPenalties && (
