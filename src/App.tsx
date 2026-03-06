@@ -19,7 +19,10 @@ import {
   BookOpen,
   Save,
   Download,
-  ArrowDown
+  ArrowDown,
+  Sun,
+  Moon,
+  Monitor
 } from 'lucide-react';
 import { Combatant, CombatantType, StyleRank, Condition, ActiveCondition } from './types';
 import { STYLE_RANKS, INITIAL_CONDITIONS } from './constants';
@@ -35,6 +38,7 @@ export default function App() {
   const [showOnlyFinalPenalties, setShowOnlyFinalPenalties] = useState(false);
   const [hoveredCondition, setHoveredCondition] = useState<string | null>(null);
   const [hoveredPenaltyIdx, setHoveredPenaltyIdx] = useState<number | null>(null);
+  const [theme, setTheme] = useState<'dark' | 'light' | 'projector'>('dark');
   
   // Form state
   const [newName, setNewName] = useState('');
@@ -94,14 +98,19 @@ export default function App() {
         const { combatants: mCombatants, conditions: mConditions } = migrateState(data);
         setCombatants(mCombatants);
         setConditions(mConditions);
+        if (data.theme) setTheme(data.theme);
       } catch (e) {
         console.error("Failed to load state", e);
       }
     }
   }, []);
 
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
   const saveState = () => {
-    const state = { combatants, conditions };
+    const state = { combatants, conditions, theme };
     localStorage.setItem('rpg_combat_state', JSON.stringify(state));
     alert("Estado do combate salvo com sucesso!");
   };
@@ -114,6 +123,7 @@ export default function App() {
         const { combatants: mCombatants, conditions: mConditions } = migrateState(data);
         setCombatants(mCombatants);
         setConditions(mConditions);
+        if (data.theme) setTheme(data.theme);
         alert("Estado do combate carregado!");
       } catch (e) {
         console.error("Failed to load state", e);
@@ -557,6 +567,30 @@ export default function App() {
               <Download size={18} className="sm:w-5 sm:h-5" />
             </button>
             <div className="w-px h-6 bg-zinc-800 mx-1 sm:mx-2" />
+            
+            {/* Theme Switcher */}
+            <div className="flex bg-zinc-950 p-1 rounded-full border border-zinc-800 gap-0.5">
+              {[
+                { id: 'dark', icon: Moon, label: 'Escuro' },
+                { id: 'light', icon: Sun, label: 'Claro' },
+                { id: 'projector', icon: Monitor, label: 'Projetor' },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTheme(t.id as any)}
+                  className={`p-1.5 rounded-full transition-all ${
+                    theme === t.id 
+                      ? 'bg-zinc-800 text-white shadow-inner' 
+                      : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                  title={t.label}
+                >
+                  <t.icon size={14} className="sm:w-4 sm:h-4" />
+                </button>
+              ))}
+            </div>
+
+            <div className="w-px h-6 bg-zinc-800 mx-1 sm:mx-2" />
             <nav className="flex gap-0.5 sm:gap-1 bg-zinc-950 p-1 rounded-full border border-zinc-800">
             {[
               { id: 'combat', label: 'Combate', icon: Play },
@@ -812,7 +846,7 @@ export default function App() {
                 </div>
               ) : (
                 /* Active Combat Mode - Dedicated Dark Theme */
-                <div className="fixed inset-0 z-[60] bg-black flex flex-col p-4 md:p-6 overflow-y-auto custom-scrollbar">
+                <div className="fixed inset-0 z-[60] bg-zinc-950 flex flex-col p-4 md:p-6 overflow-y-auto custom-scrollbar">
                   <div className="max-w-5xl mx-auto w-full flex flex-col gap-4 min-h-full">
                     <div className="flex items-center justify-between shrink-0">
                       <button 
@@ -847,7 +881,7 @@ export default function App() {
                         </button>
                         <button
                           onClick={nextTurn}
-                          className="bg-primary hover:opacity-90 py-3 rounded-2xl flex items-center justify-center gap-2 text-white transition-all group shadow-lg shadow-primary/20"
+                          className="bg-primary hover:opacity-90 py-3 rounded-2xl flex items-center justify-center gap-2 text-zinc-100 transition-all group shadow-lg shadow-primary/20"
                         >
                           <span className="text-xs font-bold uppercase tracking-wider">Próximo</span>
                           <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
@@ -879,7 +913,7 @@ export default function App() {
                             }
                           }}
                           exit={{ opacity: 0, y: -20 }}
-                          className="bg-zinc-950 border border-zinc-800 rounded-[2rem] p-4 md:p-6 shadow-[0_0_100px_rgba(0,0,0,1)] relative overflow-hidden ring-1 ring-zinc-800/50 flex flex-col gap-6"
+                          className="bg-zinc-950 border border-zinc-800 rounded-[2rem] p-4 md:p-6 shadow-2xl relative overflow-hidden ring-1 ring-zinc-800/50 flex flex-col gap-6"
                         >
                           {/* Background Glow */}
                           <div className={`absolute -top-24 -left-24 w-64 h-64 blur-[120px] opacity-20 rounded-full ${
@@ -897,7 +931,7 @@ export default function App() {
                               {currentCombatant.type}
                             </div>
 
-                            <h2 className="text-2xl sm:text-4xl md:text-6xl font-display font-black tracking-tighter text-white drop-shadow-2xl line-clamp-2 break-all px-4">
+                            <h2 className="text-2xl sm:text-4xl md:text-6xl font-display font-black tracking-tighter text-zinc-100 drop-shadow-2xl line-clamp-2 break-all px-4">
                               {currentCombatant.name}
                             </h2>
 
@@ -1415,7 +1449,7 @@ export default function App() {
       {/* Confirmation Dialog */}
       <AnimatePresence>
         {conditionToDelete && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
