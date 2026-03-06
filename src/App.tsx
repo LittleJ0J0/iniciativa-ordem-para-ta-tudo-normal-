@@ -554,14 +554,14 @@ export default function App() {
           <div className="flex items-center gap-1 sm:gap-2">
             <button
               onClick={saveState}
-              className="p-1.5 sm:p-2 text-zinc-500 hover:text-white transition-colors"
+              className="p-1.5 sm:p-2 text-zinc-500 hover:text-zinc-100 transition-colors"
               title="Salvar Combate"
             >
               <Save size={18} className="sm:w-5 sm:h-5" />
             </button>
             <button
               onClick={loadState}
-              className="p-1.5 sm:p-2 text-zinc-500 hover:text-white transition-colors"
+              className="p-1.5 sm:p-2 text-zinc-500 hover:text-zinc-100 transition-colors"
               title="Carregar Combate"
             >
               <Download size={18} className="sm:w-5 sm:h-5" />
@@ -580,7 +580,7 @@ export default function App() {
                   onClick={() => setTheme(t.id as any)}
                   className={`p-1.5 rounded-full transition-all ${
                     theme === t.id 
-                      ? 'bg-zinc-800 text-white shadow-inner' 
+                      ? 'bg-zinc-800 text-zinc-50 shadow-inner' 
                       : 'text-zinc-500 hover:text-zinc-300'
                   }`}
                   title={t.label}
@@ -602,7 +602,7 @@ export default function App() {
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all ${
                   activeTab === tab.id 
-                    ? 'bg-zinc-800 text-white shadow-inner' 
+                    ? 'bg-zinc-800 text-zinc-100 shadow-inner' 
                     : 'text-zinc-500 hover:text-zinc-300'
                 }`}
               >
@@ -658,7 +658,7 @@ export default function App() {
                                 onClick={() => setNewType(type.id)}
                                 className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition-all ${
                                   newType === type.id 
-                                    ? 'bg-zinc-800 border-zinc-600 text-white' 
+                                    ? 'bg-zinc-800 border-zinc-600 text-zinc-50' 
                                     : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:border-zinc-700'
                                 }`}
                               >
@@ -712,13 +712,13 @@ export default function App() {
                     </div>
 
                     {combatants.length > 0 && (
-                      <button
-                        onClick={() => setIsCombatStarted(true)}
-                        className="w-full bg-white hover:bg-zinc-200 text-black font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-xl"
-                      >
-                        <Play size={24} fill="currentColor" />
-                        INICIAR COMBATE
-                      </button>
+                          <button
+                            onClick={() => setIsCombatStarted(true)}
+                            className="w-full bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-xl"
+                          >
+                          <Play size={24} fill="currentColor" />
+                          INICIAR COMBATE
+                        </button>
                     )}
                   </div>
 
@@ -733,7 +733,7 @@ export default function App() {
                         {combatants.length > 5 && (
                           <button 
                             onClick={scrollToNext}
-                            className="text-zinc-500 hover:text-white transition-colors flex items-center gap-1 text-sm bg-zinc-900 px-2 py-1 rounded-lg border border-zinc-800"
+                            className="text-zinc-500 hover:text-zinc-100 transition-colors flex items-center gap-1 text-sm bg-zinc-900 px-2 py-1 rounded-lg border border-zinc-800"
                           >
                             <ArrowDown size={14} />
                             Rolar
@@ -862,7 +862,7 @@ export default function App() {
                         </div>
                         <button
                           onClick={saveState}
-                          className="p-1.5 text-zinc-600 hover:text-white transition-colors bg-zinc-900/50 rounded-xl border border-zinc-800"
+                          className="p-1.5 text-zinc-600 hover:text-zinc-100 transition-colors bg-zinc-900/50 rounded-xl border border-zinc-800"
                           title="Salvar Estado"
                         >
                           <Save size={18} />
@@ -874,7 +874,7 @@ export default function App() {
                       <div className="grid grid-cols-2 gap-3 shrink-0">
                         <button
                           onClick={prevTurn}
-                          className="bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-800 py-3 rounded-2xl flex items-center justify-center gap-2 text-zinc-500 hover:text-white transition-all group"
+                          className="bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-800 py-3 rounded-2xl flex items-center justify-center gap-2 text-zinc-500 hover:text-zinc-100 transition-all group"
                         >
                           <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
                           <span className="text-xs font-bold uppercase tracking-wider">Voltar</span>
@@ -975,10 +975,10 @@ export default function App() {
                                   >
                                     {showOnlyFinalPenalties ? 'Ver Tudo' : 'Limpar UI'}
                                   </button>
-                                  <button 
-                                    onClick={() => setIsConditionsMinimized(!isConditionsMinimized)}
-                                    className="text-[10px] font-bold text-zinc-400 hover:text-white transition-colors uppercase tracking-widest flex items-center gap-1"
-                                  >
+                        <button 
+                          onClick={() => setIsConditionsMinimized(!isConditionsMinimized)}
+                          className="text-[10px] font-bold text-zinc-400 hover:text-zinc-100 transition-colors uppercase tracking-widest flex items-center gap-1"
+                        >
                                     {isConditionsMinimized ? 'Expandir' : 'Minimizar'}
                                     {isConditionsMinimized ? <ChevronRight size={12} /> : <ArrowDown size={12} />}
                                   </button>
@@ -1029,7 +1029,7 @@ export default function App() {
                                               <div className="flex items-center justify-center gap-1 bg-zinc-900 rounded-lg border border-zinc-800 p-1">
                                                 <button 
                                                   onClick={() => updateConditionDuration(currentCombatant.id, cond.id, -1)}
-                                                  className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-white"
+                                                  className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-100"
                                                 >
                                                   <Minus size={10} />
                                                 </button>
@@ -1038,7 +1038,7 @@ export default function App() {
                                                 </span>
                                                 <button 
                                                   onClick={() => updateConditionDuration(currentCombatant.id, cond.id, 1)}
-                                                  className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-white"
+                                                  className="w-5 h-5 flex items-center justify-center text-zinc-500 hover:text-zinc-100"
                                                 >
                                                   <Plus size={10} />
                                                 </button>
@@ -1221,7 +1221,7 @@ export default function App() {
                                     </button>
                                     <button 
                                       onClick={() => updateStyle(currentCombatant.id, 'reset')}
-                                      className="w-9 h-9 bg-zinc-950 hover:bg-zinc-800 rounded-lg text-zinc-600 hover:text-white border border-zinc-800 transition-all flex flex-col items-center justify-center"
+                                      className="w-9 h-9 bg-zinc-950 hover:bg-zinc-800 rounded-lg text-zinc-600 hover:text-zinc-100 border border-zinc-800 transition-all flex flex-col items-center justify-center"
                                     >
                                       <RotateCcw size={14} />
                                     </button>
@@ -1292,11 +1292,11 @@ export default function App() {
                           className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                         />
                       </div>
-                      <button
-                        onClick={addCondition}
-                        disabled={!newConditionName.trim()}
-                        className="w-full bg-zinc-100 hover:bg-white text-black font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
-                      >
+                        <button
+                          onClick={addCondition}
+                          disabled={!newConditionName.trim()}
+                          className="w-full bg-zinc-100 hover:bg-zinc-50 text-zinc-950 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+                        >
                         <Plus size={20} />
                         Criar Condição
                       </button>
