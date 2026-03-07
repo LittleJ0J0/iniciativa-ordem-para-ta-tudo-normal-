@@ -19,6 +19,7 @@ import {
   BookOpen,
   Save,
   Download,
+  Upload,
   ArrowDown,
   Sun,
   Moon,
@@ -112,7 +113,7 @@ export default function App() {
   const saveState = () => {
     const state = { combatants, conditions, theme };
     localStorage.setItem('rpg_combat_state', JSON.stringify(state));
-    alert("Estado do combate salvo com sucesso!");
+    alert("Estado do combate salvo no navegador!");
   };
 
   const loadState = () => {
@@ -124,11 +125,56 @@ export default function App() {
         setCombatants(mCombatants);
         setConditions(mConditions);
         if (data.theme) setTheme(data.theme);
-        alert("Estado do combate carregado!");
+        alert("Estado do combate restaurado do navegador!");
       } catch (e) {
         console.error("Failed to load state", e);
       }
     }
+  };
+
+  const exportToFile = () => {
+    const state = { 
+      combatants, 
+      conditions, 
+      theme,
+      exportDate: new Date().toISOString(),
+      version: "1.0"
+    };
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `combate-rpg-${new Date().toLocaleDateString().replace(/\//g, '-')}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const importFromFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const data = JSON.parse(content);
+        const { combatants: mCombatants, conditions: mConditions } = migrateState(data);
+        
+        setCombatants(mCombatants);
+        setConditions(mConditions);
+        if (data.theme) setTheme(data.theme);
+        
+        alert("Dados importados com sucesso!");
+      } catch (err) {
+        alert("Erro ao importar arquivo. Certifique-se de que é um arquivo JSON válido gerado por este app.");
+        console.error(err);
+      }
+    };
+    reader.readAsText(file);
+    // Reset input
+    event.target.value = '';
   };
 
   const calculateTotalPenalties = (activeConditions: ActiveCondition[]) => {
@@ -555,17 +601,38 @@ export default function App() {
             <button
               onClick={saveState}
               className="p-1.5 sm:p-2 text-zinc-500 hover:text-zinc-100 transition-colors"
-              title="Salvar Combate"
+              title="Salvar no Navegador"
             >
               <Save size={18} className="sm:w-5 sm:h-5" />
             </button>
             <button
               onClick={loadState}
               className="p-1.5 sm:p-2 text-zinc-500 hover:text-zinc-100 transition-colors"
-              title="Carregar Combate"
+              title="Carregar do Navegador"
+            >
+              <RotateCcw size={18} className="sm:w-5 sm:h-5" />
+            </button>
+            
+            <div className="w-px h-6 bg-zinc-800 mx-1 sm:mx-2" />
+
+            <button
+              onClick={exportToFile}
+              className="p-1.5 sm:p-2 text-zinc-500 hover:text-zinc-100 transition-colors"
+              title="Exportar Arquivo (.json)"
             >
               <Download size={18} className="sm:w-5 sm:h-5" />
             </button>
+            
+            <label className="p-1.5 sm:p-2 text-zinc-500 hover:text-zinc-100 transition-colors cursor-pointer" title="Importar Arquivo (.json)">
+              <Upload size={18} className="sm:w-5 sm:h-5" />
+              <input 
+                type="file" 
+                accept=".json" 
+                className="hidden" 
+                onChange={importFromFile}
+              />
+            </label>
+
             <div className="w-px h-6 bg-zinc-800 mx-1 sm:mx-2" />
             
             {/* Theme Switcher */}
@@ -863,10 +930,29 @@ export default function App() {
                         <button
                           onClick={saveState}
                           className="p-1.5 text-zinc-600 hover:text-zinc-100 transition-colors bg-zinc-900/50 rounded-xl border border-zinc-800"
-                          title="Salvar Estado"
+                          title="Salvar no Navegador"
                         >
                           <Save size={18} />
                         </button>
+                        <button
+                          onClick={exportToFile}
+                          className="p-1.5 text-zinc-600 hover:text-zinc-100 transition-colors bg-zinc-900/50 rounded-xl border border-zinc-800"
+                          title="Exportar Arquivo"
+                        >
+                          <Download size={18} />
+                        </button>
+                        <label 
+                          className="p-1.5 text-zinc-600 hover:text-zinc-100 transition-colors bg-zinc-900/50 rounded-xl border border-zinc-800 cursor-pointer" 
+                          title="Importar Arquivo"
+                        >
+                          <Upload size={18} />
+                          <input 
+                            type="file" 
+                            accept=".json" 
+                            className="hidden" 
+                            onChange={importFromFile}
+                          />
+                        </label>
                       </div>
                     </div>
 
