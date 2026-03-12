@@ -194,6 +194,31 @@
   50% { text-shadow: 0 0 12px rgba(255, 77, 0, 0.8), 0 -4px 8px rgba(255, 144, 0, 0.6), 0 -8px 16px rgba(255, 0, 0, 0.4); }
 }
 
+.style-rank-bg-d { background: #71717a; }
+.style-rank-bg-c { background: #3b82f6; }
+.style-rank-bg-b { background: #22c55e; }
+.style-rank-bg-a { background: #eab308; }
+.style-rank-bg-s { background: #f97316; }
+.style-rank-bg-ss { background: #ef4444; }
+.style-rank-bg-sss { background: #a855f7; }
+
+@keyframes pulse-primary {
+  0%, 100% { opacity: 0.2; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.1); }
+}
+
+.animate-pulse-slow {
+  animation: pulse-primary 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 
 
 
