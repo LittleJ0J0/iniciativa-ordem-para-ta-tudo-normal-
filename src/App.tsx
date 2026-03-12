@@ -34,6 +34,11 @@ export default function App() {
   const [isCombatStarted, setIsCombatStarted] = useState(false);
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
   const [combatRound, setCombatRound] = useState(1);
+  const [confirmationAction, setConfirmationAction] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
   const [activeTab, setActiveTab] = useState<'combat' | 'conditions' | 'rules'>('combat');
   const [conditionToDelete, setConditionToDelete] = useState<string | null>(null);
   const [isConditionsMinimized, setIsConditionsMinimized] = useState(false);
@@ -560,18 +565,28 @@ export default function App() {
   };
 
   const resetCombat = () => {
-    if (confirm("Deseja reiniciar o combate? O contador de rodadas voltará para 1 e a iniciativa para o primeiro da fila.")) {
-      setCurrentTurnIndex(0);
-      setCombatRound(1);
-    }
+    setConfirmationAction({
+      title: "Reiniciar Combate",
+      message: "Deseja reiniciar o combate? O contador de rodadas voltará para 1 e a iniciativa para o primeiro da fila.",
+      onConfirm: () => {
+        setCurrentTurnIndex(0);
+        setCombatRound(1);
+        setConfirmationAction(null);
+      }
+    });
   };
 
   const stopCombat = () => {
-    if (confirm("Deseja encerrar o combate?")) {
-      setIsCombatStarted(false);
-      setCurrentTurnIndex(0);
-      setCombatRound(1);
-    }
+    setConfirmationAction({
+      title: "Encerrar Combate",
+      message: "Deseja encerrar o combate?",
+      onConfirm: () => {
+        setIsCombatStarted(false);
+        setCurrentTurnIndex(0);
+        setCombatRound(1);
+        setConfirmationAction(null);
+      }
+    });
   };
 
   const resetConditions = () => {
@@ -1086,7 +1101,7 @@ export default function App() {
                               {currentCombatant.type === CombatantType.PLAYER && (
                                 <div className="flex items-center gap-4 bg-zinc-900/50 p-4 rounded-[2rem] border border-zinc-800 shadow-xl">
                                   <div className="relative">
-                                    <div className={`text-6xl font-black italic style-rank-${STYLE_RANKS[currentCombatant.styleRank].label.toLowerCase()} drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]`}>
+                                    <div className={`text-6xl font-black italic font-rank style-rank-${STYLE_RANKS[currentCombatant.styleRank].label.toLowerCase()} drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]`}>
                                       {STYLE_RANKS[currentCombatant.styleRank].label}
                                     </div>
                                     <div className={`absolute -inset-2 blur-xl opacity-20 rounded-full style-rank-bg-${STYLE_RANKS[currentCombatant.styleRank].label.toLowerCase()}`} />
@@ -1576,7 +1591,7 @@ export default function App() {
                     key={rank.label}
                     className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex items-center gap-8 hover:bg-zinc-800/50 transition-all"
                   >
-                    <div className={`text-5xl font-black italic w-20 text-center style-rank-${rank.label.toLowerCase()}`}>
+                    <div className={`text-5xl font-black italic w-20 text-center font-rank style-rank-${rank.label.toLowerCase()}`}>
                       {rank.label}
                     </div>
                     <div>
@@ -1595,6 +1610,37 @@ export default function App() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Combat Confirmation Modal */}
+      <AnimatePresence>
+        {confirmationAction && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl max-w-sm w-full shadow-2xl"
+            >
+              <h3 className="text-xl font-display font-bold mb-4">{confirmationAction.title}</h3>
+              <p className="text-zinc-400 mb-8">{confirmationAction.message}</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmationAction(null)}
+                  className="flex-1 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 font-bold transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmationAction.onConfirm}
+                  className="flex-1 py-3 rounded-xl bg-primary hover:opacity-90 font-bold transition-all"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Confirmation Dialog */}
       <AnimatePresence>
