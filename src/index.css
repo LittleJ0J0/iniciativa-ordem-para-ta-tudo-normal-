@@ -1,9 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Metal+Mania&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
+  --font-rank: "Metal Mania", cursive;
   --color-primary: #ff3463;
 
   /* Overriding Zinc palette with variables for theming */
@@ -144,16 +146,6 @@
 [data-theme='light'] .style-rank-sss,
 [data-theme='projector'] .style-rank-sss { color: #e11d48; }
 
-[data-theme='light'] .style-rank-s,
-[data-theme='light'] .style-rank-ss,
-[data-theme='light'] .style-rank-sss,
-[data-theme='projector'] .style-rank-s,
-[data-theme='projector'] .style-rank-ss,
-[data-theme='projector'] .style-rank-sss {
-  animation: none !important;
-  text-shadow: none !important;
-}
-
 @layer base {
   body {
     @apply bg-zinc-950 text-zinc-100 antialiased transition-colors duration-300;
@@ -181,13 +173,13 @@
   background: #000000 !important;
 }
 
-.style-rank-d { color: var(--color-zinc-500); }
-.style-rank-c { color: var(--color-blue-400); }
-.style-rank-b { color: var(--color-green-400); }
-.style-rank-a { color: var(--color-yellow-400); }
-.style-rank-s { color: var(--color-orange-400); animation: fire 2.5s infinite ease-in-out; }
-.style-rank-ss { color: var(--color-pink-500); animation: fire 1.5s infinite ease-in-out; }
-.style-rank-sss { color: var(--color-red-500); font-weight: bold; animation: fire 0.8s infinite ease-in-out; }
+.style-rank-d { color: var(--color-zinc-500); font-family: var(--font-rank); }
+.style-rank-c { color: var(--color-blue-400); font-family: var(--font-rank); }
+.style-rank-b { color: var(--color-green-400); font-family: var(--font-rank); }
+.style-rank-a { color: var(--color-yellow-400); font-family: var(--font-rank); }
+.style-rank-s { color: var(--color-orange-400); font-family: var(--font-rank); animation: fire 2.5s infinite ease-in-out; }
+.style-rank-ss { color: var(--color-pink-500); font-family: var(--font-rank); animation: fire 1.5s infinite ease-in-out; }
+.style-rank-sss { color: var(--color-red-500); font-family: var(--font-rank); font-weight: bold; animation: fire 0.8s infinite ease-in-out; }
 
 @keyframes fire {
   0%, 100% { text-shadow: 0 0 4px rgba(255, 77, 0, 0.6), 0 -1px 2px rgba(255, 144, 0, 0.4); }
