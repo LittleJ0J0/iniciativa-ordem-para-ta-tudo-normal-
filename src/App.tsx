@@ -33,6 +33,7 @@ export default function App() {
   const [conditions, setConditions] = useState<Condition[]>(INITIAL_CONDITIONS);
   const [isCombatStarted, setIsCombatStarted] = useState(false);
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
+  const [combatRound, setCombatRound] = useState(1);
   const [activeTab, setActiveTab] = useState<'combat' | 'conditions' | 'rules'>('combat');
   const [conditionToDelete, setConditionToDelete] = useState<string | null>(null);
   const [isConditionsMinimized, setIsConditionsMinimized] = useState(false);
@@ -178,10 +179,32 @@ export default function App() {
   };
 
   const calculateTotalPenalties = (activeConditions: ActiveCondition[]) => {
-    const activeConds = activeConditions.map(ac => ({
-      ...ac,
-      data: conditions.find(c => c.id === ac.conditionId)
-    })).filter(ac => ac.data) as (ActiveCondition & { data: Condition })[];
+    // 1. Collect all conditions including recursive causes
+    const allActiveIds = new Set<string>();
+    const sourceMap = new Map<string, Set<string>>(); // targetId -> sourceIds[]
+
+    const resolveDependencies = (ac: ActiveCondition) => {
+      allActiveIds.add(ac.conditionId);
+      const cond = conditions.find(c => c.id === ac.conditionId);
+      if (cond?.causes) {
+        cond.causes.forEach(causeId => {
+          if (!sourceMap.has(causeId)) sourceMap.set(causeId, new Set());
+          sourceMap.get(causeId)!.add(ac.conditionId);
+          
+          if (!allActiveIds.has(causeId)) {
+            resolveDependencies({ conditionId: causeId, remainingTurns: null, isManual: false });
+          }
+        });
+      }
+    };
+
+    activeConditions.forEach(ac => resolveDependencies(ac));
+
+    const activeCondsData = Array.from(allActiveIds).map(id => ({
+      id,
+      data: conditions.find(c => c.id === id),
+      isManual: activeConditions.find(ac => ac.conditionId === id)?.isManual ?? false
+    })).filter(c => c.data) as { id: string, data: Condition, isManual: boolean }[];
     
     let maxDefensePenalty = 0;
     let defenseSources: string[] = [];
@@ -222,7 +245,7 @@ export default function App() {
     let recurringDamage: { label: string, sourceId: string }[] = [];
     let stateResults: { label: string, sourceId: string }[] = [];
     
-    activeConds.forEach(ac => {
+    activeCondsData.forEach(ac => {
       const cond = ac.data;
       const summary = cond.summary || "";
       
@@ -334,7 +357,7 @@ export default function App() {
     if (peCostIncrease > 0) results.push({ label: `+${peCostIncrease} Custo PE`, sourceIds: peSources });
     if (rd > 0) results.push({ label: `RD ${rd}`, sourceIds: rdSources });
     if (failureChance > 0) results.push({ label: `${Math.min(75, failureChance)}% Chance de Falha`, sourceIds: failureSources });
-    if (fortification > 0) results.push({ label: `Fortificação ${fortification}%`, sourceIds: fortificationSources });
+    if (fortification > 0) results.push({ label: `Fortification ${fortification}%`, sourceIds: fortificationSources });
     if (curaAcelerada > 0) results.push({ label: `Cura Acelerada ${curaAcelerada}`, sourceIds: curaSources });
     
     recurringDamage.forEach(d => results.push({ label: d.label, sourceIds: [d.sourceId] }));
@@ -351,9 +374,9 @@ export default function App() {
     const representedIds = new Set<string>();
     results.forEach(r => r.sourceIds.forEach(id => representedIds.add(id)));
     
-    activeConds.forEach(ac => {
-      if (!representedIds.has(ac.conditionId)) {
-        results.push({ label: ac.data.name, sourceIds: [ac.conditionId] });
+    activeCondsData.forEach(ac => {
+      if (!representedIds.has(ac.id)) {
+        results.push({ label: ac.data.name, sourceIds: [ac.id] });
       }
     });
 
@@ -501,6 +524,11 @@ export default function App() {
   };
 
   const nextTurn = () => {
+    const nextIndex = (currentTurnIndex + 1) % sortedCombatants.length;
+    if (nextIndex === 0) {
+      setCombatRound(prev => prev + 1);
+    }
+
     // Decrement durations for the combatant whose turn just ended
     const endingCombatant = sortedCombatants[currentTurnIndex];
     if (endingCombatant) {
@@ -514,42 +542,36 @@ export default function App() {
           }))
           .filter(ac => ac.remainingTurns === null || ac.remainingTurns > 0);
 
-        // After duration removal, we need to re-check dependencies
-        // If a manual condition expired, its caused conditions might need to go
-        const isStillCaused = (targetId: string, currentList: ActiveCondition[]) => {
-          return currentList.some(ac => {
-            const condData = conditions.find(cond => cond.id === ac.conditionId);
-            return condData?.causes?.includes(targetId);
-          });
-        };
-
-        const cleanupDependencies = (list: ActiveCondition[]) => {
-          let changed = true;
-          while (changed) {
-            changed = false;
-            for (let i = 0; i < list.length; i++) {
-              const ac = list[i];
-              if (!ac.isManual && !isStillCaused(ac.conditionId, list)) {
-                list.splice(i, 1);
-                changed = true;
-                break;
-              }
-            }
-          }
-          return list;
-        };
-
         return {
           ...c,
-          activeConditions: cleanupDependencies(newConditions)
+          activeConditions: newConditions
         };
       }));
     }
-    setCurrentTurnIndex((prev) => (prev + 1) % sortedCombatants.length);
+    setCurrentTurnIndex(nextIndex);
   };
 
   const prevTurn = () => {
-    setCurrentTurnIndex((prev) => (prev - 1 + sortedCombatants.length) % sortedCombatants.length);
+    const prevIndex = (currentTurnIndex - 1 + sortedCombatants.length) % sortedCombatants.length;
+    if (currentTurnIndex === 0) {
+      setCombatRound(prev => Math.max(1, prev - 1));
+    }
+    setCurrentTurnIndex(prevIndex);
+  };
+
+  const resetCombat = () => {
+    if (confirm("Deseja reiniciar o combate? O contador de rodadas voltará para 1 e a iniciativa para o primeiro da fila.")) {
+      setCurrentTurnIndex(0);
+      setCombatRound(1);
+    }
+  };
+
+  const stopCombat = () => {
+    if (confirm("Deseja encerrar o combate?")) {
+      setIsCombatStarted(false);
+      setCurrentTurnIndex(0);
+      setCombatRound(1);
+    }
   };
 
   const resetConditions = () => {
@@ -916,44 +938,78 @@ export default function App() {
                 <div className="fixed inset-0 z-[60] bg-zinc-950 flex flex-col p-4 md:p-6 overflow-y-auto custom-scrollbar">
                   <div className="max-w-5xl mx-auto w-full flex flex-col gap-4 min-h-full">
                     <div className="flex items-center justify-between shrink-0">
-                      <button 
-                        onClick={() => setIsCombatStarted(false)}
-                        className="flex items-center gap-2 text-zinc-600 hover:text-zinc-400 transition-colors bg-zinc-900/50 px-3 py-1.5 rounded-xl border border-zinc-800 text-sm"
-                      >
-                        <ChevronLeft size={18} />
-                        Sair
-                      </button>
                       <div className="flex items-center gap-4">
-                        <div className="text-zinc-600 font-mono text-xs bg-zinc-900/50 px-3 py-1.5 rounded-xl border border-zinc-800">
+                        <button 
+                          onClick={stopCombat}
+                          className="flex items-center gap-2 text-zinc-400 hover:text-primary transition-colors bg-zinc-900/50 px-3 py-1.5 rounded-xl border border-zinc-800 text-sm font-bold"
+                        >
+                          <X size={18} />
+                          Encerrar
+                        </button>
+                        <button 
+                          onClick={resetCombat}
+                          className="flex items-center gap-2 text-zinc-400 hover:text-zinc-100 transition-colors bg-zinc-900/50 px-3 py-1.5 rounded-xl border border-zinc-800 text-sm font-bold"
+                        >
+                          <RotateCcw size={18} />
+                          Reiniciar
+                        </button>
+                      </div>
+                      
+                      <div className="flex flex-col items-center">
+                        <div className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-0.5">Rodada</div>
+                        <div className="text-3xl font-display font-black text-zinc-100">{combatRound}</div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <div className="text-zinc-400 font-mono text-xs bg-zinc-900/50 px-3 py-1.5 rounded-xl border border-zinc-800 flex items-center gap-2">
+                          <User size={14} className="text-zinc-600" />
                           Turno {currentTurnIndex + 1} / {sortedCombatants.length}
                         </div>
-                        <button
-                          onClick={saveState}
-                          className="p-1.5 text-zinc-600 hover:text-zinc-100 transition-colors bg-zinc-900/50 rounded-xl border border-zinc-800"
-                          title="Salvar no Navegador"
-                        >
-                          <Save size={18} />
-                        </button>
-                        <button
-                          onClick={exportToFile}
-                          className="p-1.5 text-zinc-600 hover:text-zinc-100 transition-colors bg-zinc-900/50 rounded-xl border border-zinc-800"
-                          title="Exportar Arquivo"
-                        >
-                          <Download size={18} />
-                        </button>
-                        <label 
-                          className="p-1.5 text-zinc-600 hover:text-zinc-100 transition-colors bg-zinc-900/50 rounded-xl border border-zinc-800 cursor-pointer" 
-                          title="Importar Arquivo"
-                        >
-                          <Upload size={18} />
-                          <input 
-                            type="file" 
-                            accept=".json" 
-                            className="hidden" 
-                            onChange={importFromFile}
-                          />
-                        </label>
+                        <div className="hidden sm:flex items-center gap-2">
+                          <button
+                            onClick={saveState}
+                            className="p-1.5 text-zinc-500 hover:text-zinc-100 transition-colors bg-zinc-900/50 rounded-xl border border-zinc-800"
+                            title="Salvar no Navegador"
+                          >
+                            <Save size={18} />
+                          </button>
+                          <button
+                            onClick={exportToFile}
+                            className="p-1.5 text-zinc-500 hover:text-zinc-100 transition-colors bg-zinc-900/50 rounded-xl border border-zinc-800"
+                            title="Exportar Arquivo"
+                          >
+                            <Download size={18} />
+                          </button>
+                        </div>
                       </div>
+                    </div>
+
+                    {/* Turn Timeline */}
+                    <div className="flex items-center gap-2 overflow-x-auto py-2 px-1 no-scrollbar shrink-0">
+                      {sortedCombatants.map((c, i) => {
+                        const isCurrent = i === currentTurnIndex;
+                        const isNext = i === (currentTurnIndex + 1) % sortedCombatants.length;
+                        return (
+                          <div 
+                            key={c.id}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all shrink-0 ${
+                              isCurrent 
+                                ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20 scale-105 z-10' 
+                                : isNext
+                                  ? 'bg-zinc-900 border-zinc-700 text-zinc-300'
+                                  : 'bg-zinc-950 border-zinc-900 text-zinc-600 opacity-60'
+                            }`}
+                          >
+                            <div className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold ${
+                              isCurrent ? 'bg-white/20' : 'bg-zinc-800'
+                            }`}>
+                              {c.initiative}
+                            </div>
+                            <span className="text-xs font-bold truncate max-w-[80px]">{c.name}</span>
+                            {isCurrent && <ChevronRight size={14} className="animate-pulse" />}
+                          </div>
+                        );
+                      })}
                     </div>
 
                     <div className="flex flex-col gap-4 pb-8">
@@ -1021,22 +1077,25 @@ export default function App() {
                               {currentCombatant.name}
                             </h2>
 
-                            <div className="flex items-center justify-center gap-6">
+                            <div className="flex items-center justify-center gap-8">
                               <div className="flex flex-col items-center">
                                 <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-1">Iniciativa</span>
-                                <span className="text-3xl font-mono font-bold text-zinc-300">{currentCombatant.initiative}</span>
+                                <span className="text-4xl font-mono font-black text-zinc-100">{currentCombatant.initiative}</span>
                               </div>
                               
                               {currentCombatant.type === CombatantType.PLAYER && (
-                                <div className="flex items-center gap-3 bg-zinc-900/30 p-3 rounded-2xl border border-zinc-800/50">
-                                  <span className={`text-4xl font-black italic style-rank-${STYLE_RANKS[currentCombatant.styleRank].label.toLowerCase()}`}>
-                                    {STYLE_RANKS[currentCombatant.styleRank].label}
-                                  </span>
-                                  <div className="text-left border-l border-zinc-800 pl-3">
-                                    <div className={`text-base font-bold style-rank-${STYLE_RANKS[currentCombatant.styleRank].label.toLowerCase()}`}>
+                                <div className="flex items-center gap-4 bg-zinc-900/50 p-4 rounded-[2rem] border border-zinc-800 shadow-xl">
+                                  <div className="relative">
+                                    <div className={`text-6xl font-black italic style-rank-${STYLE_RANKS[currentCombatant.styleRank].label.toLowerCase()} drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]`}>
+                                      {STYLE_RANKS[currentCombatant.styleRank].label}
+                                    </div>
+                                    <div className={`absolute -inset-2 blur-xl opacity-20 rounded-full style-rank-bg-${STYLE_RANKS[currentCombatant.styleRank].label.toLowerCase()}`} />
+                                  </div>
+                                  <div className="text-left border-l border-zinc-800 pl-4">
+                                    <div className={`text-xl font-black uppercase tracking-tighter style-rank-${STYLE_RANKS[currentCombatant.styleRank].label.toLowerCase()}`}>
                                       {STYLE_RANKS[currentCombatant.styleRank].name}
                                     </div>
-                                    <div className="text-[9px] text-zinc-500 max-w-[120px] leading-tight">
+                                    <div className="text-[10px] text-zinc-400 max-w-[150px] leading-tight font-medium mt-1">
                                       {STYLE_RANKS[currentCombatant.styleRank].bonus}
                                     </div>
                                   </div>
@@ -1288,34 +1347,39 @@ export default function App() {
 
                               {/* Style Controls for Players */}
                               {currentCombatant.type === CombatantType.PLAYER && (
-                                <div className="flex flex-col items-center gap-2 bg-zinc-900/40 p-3 rounded-2xl border border-zinc-800/50">
-                                  <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">Estilo</div>
-                                  <div className="flex items-center gap-1.5">
+                                <div className="flex flex-col items-center gap-3 bg-zinc-900/40 p-4 rounded-3xl border border-zinc-800/50 shadow-inner">
+                                  <div className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Controle de Estilo</div>
+                                  <div className="flex items-center gap-2">
                                     <button 
                                       onClick={() => updateStyle(currentCombatant.id, 'down')}
-                                      className="w-9 h-9 bg-zinc-950 hover:bg-primary/10 rounded-lg text-zinc-600 hover:text-primary border border-zinc-800 transition-all flex flex-col items-center justify-center"
-                                      title="Cair 2 níveis"
+                                      className="w-12 h-12 bg-zinc-950 hover:bg-red-950/30 rounded-2xl text-zinc-600 hover:text-red-500 border border-zinc-800 transition-all flex flex-col items-center justify-center shadow-lg group"
+                                      title="Cair 2 níveis (Dano sofrido)"
                                     >
-                                      <TrendingDown size={14} />
+                                      <TrendingDown size={18} className="group-hover:scale-110 transition-transform" />
+                                      <span className="text-[8px] font-bold mt-0.5">-2</span>
                                     </button>
                                     <button 
                                       onClick={() => updateStyle(currentCombatant.id, 'minus')}
-                                      className="w-9 h-9 bg-zinc-950 hover:bg-primary/10 rounded-lg text-zinc-600 hover:text-primary border border-zinc-800 transition-all flex flex-col items-center justify-center"
-                                      title="Tirar 1 nível"
+                                      className="w-12 h-12 bg-zinc-950 hover:bg-amber-950/30 rounded-2xl text-zinc-600 hover:text-amber-500 border border-zinc-800 transition-all flex flex-col items-center justify-center shadow-lg group"
+                                      title="Tirar 1 nível (Repetição)"
                                     >
-                                      <Minus size={14} />
+                                      <Minus size={18} className="group-hover:scale-110 transition-transform" />
+                                      <span className="text-[8px] font-bold mt-0.5">-1</span>
                                     </button>
                                     <button 
                                       onClick={() => updateStyle(currentCombatant.id, 'reset')}
-                                      className="w-9 h-9 bg-zinc-950 hover:bg-zinc-800 rounded-lg text-zinc-600 hover:text-zinc-100 border border-zinc-800 transition-all flex flex-col items-center justify-center"
+                                      className="w-12 h-12 bg-zinc-950 hover:bg-zinc-800 rounded-2xl text-zinc-600 hover:text-zinc-100 border border-zinc-800 transition-all flex flex-col items-center justify-center shadow-lg group"
+                                      title="Resetar (Inatividade)"
                                     >
-                                      <RotateCcw size={14} />
+                                      <RotateCcw size={18} className="group-hover:rotate-180 transition-transform duration-500" />
                                     </button>
                                     <button 
                                       onClick={() => updateStyle(currentCombatant.id, 'up')}
-                                      className="w-9 h-9 bg-zinc-950 hover:bg-green-950/30 rounded-lg text-zinc-600 hover:text-green-500 border border-zinc-800 transition-all flex flex-col items-center justify-center"
+                                      className="w-14 h-14 bg-primary/10 hover:bg-primary/20 rounded-2xl text-primary border border-primary/30 transition-all flex flex-col items-center justify-center shadow-lg shadow-primary/10 group"
+                                      title="Subir 1 nível (Ação Criativa/Diferente)"
                                     >
-                                      <TrendingUp size={14} />
+                                      <TrendingUp size={22} className="group-hover:scale-125 transition-transform" />
+                                      <span className="text-[8px] font-black mt-0.5">+1</span>
                                     </button>
                                   </div>
                                 </div>
